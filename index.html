@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#e91e63">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfume Search App</title>
+    <style>
+        :root {
+            --primary: #e91e63;
+            --dark: #222;
+            --light: #f8f9fa;
+        }
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--light);
+            margin: 0;
+            padding: 10px;
+            color: var(--dark);
+        }
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            background: var(--light);
+            z-index: 100;
+        }
+        .search-box {
+            width: 90%;
+            max-width: 500px;
+            padding: 15px 20px;
+            border-radius: 30px;
+            border: 2px solid var(--primary);
+            font-size: 18px;
+            outline: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        #results {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+            padding-bottom: 50px;
+        }
+        .card {
+            background: white;
+            width: 95%;
+            max-width: 450px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+            animation: slideUp 0.3s ease-out;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .card-img {
+            width: 100%;
+            height: 250px;
+            object-fit: contain;
+            background: #fff;
+            padding: 10px;
+        }
+        .card-content {
+            padding: 20px;
+        }
+        .brand {
+            font-size: 14px;
+            text-transform: uppercase;
+            color: #777;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+        .name {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: var(--dark);
+        }
+        .code-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .code-row:last-child { border: none; }
+        .size { font-weight: 600; color: var(--primary); }
+        .code { font-family: monospace; font-size: 16px; background: #f0f0f0; padding: 2px 8px; border-radius: 4px; }
+        .no-results { color: #999; margin-top: 50px; text-align: center; }
+    </style>
+</head>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
+  }
+</script>
+<body>
+
+    <div class="header">
+        <input type="text" id="search" class="search-box" placeholder="Type name or number (e.g. 01, Sauvage)..." autofocus>
+    </div>
+
+    <div id="results">
+        <div class="no-results">Enter a search term to find products</div>
+    </div>
+
+    <script>
+        const perfumes = [
+            // PAGE 1
+            { id: "01", brand: "P. RABANNE", name: "One Million", codes: {"15ml": "T001", "30ml": "301", "70ml": "001"} },
+            { id: "02", brand: "ARMANI", name: "Acqua Di Gio G.", codes: {"15ml": "T002", "30ml": "302", "70ml": "002"} },
+            { id: "03", brand: "C. DIOR", name: "Fahrenheit", codes: {"15ml": "T003", "30ml": "303", "70ml": "003"} },
+            { id: "04", brand: "D&G", name: "The One", codes: {"15ml": "T004", "30ml": "304", "70ml": "004"} },
+            { id: "150M", brand: "HUGO BOSS", name: "Unbending Man", codes: {"15ml": "T150M", "30ml": "3150M", "70ml": "150M"} },
+            { id: "06", brand: "Y. SAINT LAURENT", name: "Opium", codes: {"15ml": "T006", "30ml": "306", "70ml": "006"} },
+            { id: "07", brand: "C. DIOR", name: "J'Adore", codes: {"15ml": "T007", "30ml": "307", "70ml": "007"} },
+            { id: "10", brand: "T. MUGLER", name: "Alien", codes: {"15ml": "T010", "30ml": "310", "70ml": "010"} },
+            { id: "11", brand: "D&G", name: "Light Blue", codes: {"15ml": "T011", "30ml": "3011", "70ml": "011"} },
+            { id: "12", brand: "C. DIOR", name: "Eau Sauvage", codes: {"15ml": "T012", "30ml": "312", "70ml": "012"} },
+            { id: "151W", brand: "GUCCI", name: "Guilty To The Edge For Her", codes: {"15ml": "T151W", "30ml": "3151W", "70ml": "151W"} },
+            { id: "14", brand: "Y. SAINT LAURENT", name: "Manifesto", codes: {"15ml": "T014", "30ml": "314", "70ml": "014"} },
+            { id: "15", brand: "BIAGIOTTI", name: "Roma L.", codes: {"15ml": "T015", "30ml": "315", "70ml": "015"} },
+            { id: "16", brand: "JP. GAULTIER", name: "Le Mâle", codes: {"15ml": "T016", "30ml": "316", "70ml": "016"} },
+            { id: "152M", brand: "GUCCI", name: "Guilty To The Edge For Him", codes: {"15ml": "T152M", "30ml": "3152M", "70ml": "152M"} },
+            { id: "18", brand: "CARTIER", name: "Déclaration", codes: {"15ml": "T018", "30ml": "318", "70ml": "018"} },
+            { id: "19", brand: "P. RABANNE", name: "Lady Million", codes: {"15ml": "T019", "30ml": "316", "70ml": "016"} },
+            { id: "20", brand: "Y. SAINT LAURENT", name: "La Nuit de l'Homme", codes: {"15ml": "T020", "30ml": "320", "70ml": "020"} },
+            { id: "21", brand: "D&G", name: "Light Blue", codes: {"15ml": "T021", "30ml": "321", "70ml": "021"} },
+            { id: "22", brand: "HERMES", name: "Terre d'Hermès", codes: {"15ml": "T022", "30ml": "322", "70ml": "022"} },
+            { id: "23", brand: "C. DIOR", name: "Hypnotic Poison", codes: {"15ml": "T023", "30ml": "323", "70ml": "023"} },
+            { id: "24", brand: "CHANEL", name: "Chanel nº5", codes: {"15ml": "T024", "30ml": "324", "70ml": "024"} },
+            { id: "25", brand: "N. RODRIGUEZ", name: "for Her", codes: {"15ml": "T025", "30ml": "325", "70ml": "025"} },
+            { id: "26", brand: "KENZO", name: "Flower", codes: {"15ml": "T026", "30ml": "326", "70ml": "026"} },
+
+            // PAGE 2
+            { id: "27", brand: "LANCOME", name: "Trésor", codes: {"15ml": "T027", "30ml": "327", "70ml": "027"} },
+            { id: "28", brand: "T. MUGLER", name: "Angel", codes: {"15ml": "T028", "30ml": "328", "70ml": "028"} },
+            { id: "29", brand: "I. MIYAKE", name: "Eau D'Issey", codes: {"15ml": "T029", "30ml": "329", "70ml": "029"} },
+            { id: "30", brand: "P. RABANNE", name: "Black XS", codes: {"15ml": "T030", "30ml": "330", "70ml": "030"} },
+            { id: "32", brand: "VIKTOR & ROLF", name: "Spice Bomb", codes: {"15ml": "T032", "30ml": "332", "70ml": "032"} },
+            { id: "33", brand: "G. ARMANI", name: "Black Code", codes: {"15ml": "T033", "30ml": "333", "70ml": "033"} },
+            { id: "37", brand: "BULGARI", name: "Man Bulgari", codes: {"15ml": "T037", "30ml": "337", "70ml": "037"} },
+            { id: "38", brand: "CHANEL", name: "Bleu de Chanel", codes: {"15ml": "T038", "30ml": "338", "70ml": "038"} },
+            { id: "39", brand: "C. DIOR", name: "Miss Dior Chérie", codes: {"15ml": "T039", "30ml": "339", "70ml": "039"} },
+            { id: "40", brand: "LANCOME", name: "Hypnose", codes: {"15ml": "T040", "30ml": "340", "70ml": "040"} },
+            { id: "153W", brand: "CHLOE", name: "Rose Dust", codes: {"15ml": "153W", "30ml": "3153W", "70ml": "153W"} },
+            { id: "42", brand: "LANCOME", name: "La Vie est Belle", codes: {"15ml": "T042", "30ml": "342", "70ml": "042"} },
+            { id: "154W", brand: "CHLOE", name: "Love Chloé Liaison Rose", codes: {"15ml": "T154W", "30ml": "3154W", "70ml": "154W"} },
+            { id: "44", brand: "CREED", name: "Silver Mountain Water", codes: {"15ml": "T044", "30ml": "344", "70ml": "044"} },
+            { id: "155U", brand: "C. KLEIN", name: "CK One True Self", codes: {"15ml": "T155U", "30ml": "3155", "70ml": "155U"} },
+            { id: "47", brand: "VERSACE", name: "Crystal Noir", codes: {"15ml": "T047", "30ml": "347", "70ml": "047"} },
+            { id: "48", brand: "CHANEL", name: "Allure", codes: {"15ml": "T048", "30ml": "348", "70ml": "048"} },
+            { id: "49", brand: "D&G", name: "Dolce", codes: {"15ml": "T049", "30ml": "349", "70ml": "049"} },
+            { id: "160M", brand: "BURBERRY", name: "Burberry for men", codes: {"15ml": "T160M", "30ml": "3160M", "70ml": "160M"} },
+            { id: "51", brand: "CHANEL", name: "Coco Mademoiselle To the edge", codes: {"15ml": "T051", "30ml": "351", "70ml": "051"} },
+            { id: "52", brand: "CARTIER", name: "Pasha 150", codes: {"15ml": "T052", "30ml": "352", "70ml": "052"} },
+            { id: "53", brand: "RODRIGUEZ", name: "Narciso N.", codes: {"15ml": "T053", "30ml": "353", "70ml": "053"} },
+            { id: "54", brand: "T. FORD", name: "Black Orchid", codes: {"15ml": "T054", "30ml": "354", "70ml": "054"} },
+            { id: "55", brand: "Y. SAINT LAURENT", name: "Black Opium", codes: {"15ml": "T055", "30ml": "355", "70ml": "055"} },
+
+            // PAGE 3
+            { id: "56", brand: "GIVENCHY", name: "Ange ou Démon", codes: {"15ml": "T056", "30ml": "356", "70ml": "056"} },
+            { id: "57", brand: "BULGARI", name: "Omnia Améthyste", codes: {"15ml": "T057", "30ml": "357", "70ml": "057"} },
+            { id: "61", brand: "P. RABANNE", name: "Invictus", codes: {"15ml": "T061", "30ml": "361", "70ml": "061"} },
+            { id: "62", brand: "D&G", name: "Intenso", codes: {"15ml": "T062", "30ml": "362", "70ml": "062"} },
+            { id: "156W", brand: "HUGO BOSS", name: "Unbending Woman", codes: {"15ml": "T156W", "30ml": "3156W", "70ml": "156W"} },
+            { id: "64", brand: "BULGARI", name: "Omnia Indian Garnet", codes: {"15ml": "T064", "30ml": "364", "70ml": "064"} },
+            { id: "157M", brand: "HUGO BOSS", name: "The Scent Aftertouch", codes: {"15ml": "T157M", "30ml": "3157M", "70ml": "157M"} },
+            { id: "67", brand: "P. RABANNE", name: "Olympéa", codes: {"15ml": "T067", "30ml": "367", "70ml": "067"} },
+            { id: "68", brand: "CREED", name: "Aventus", codes: {"15ml": "T068", "30ml": "369", "70ml": "069"} },
+            { id: "69", brand: "P. ROMA", name: "Acqua di Sale", codes: {"15ml": "T069", "30ml": "369", "70ml": "069"} },
+            { id: "70", brand: "D&G", name: "The One", codes: {"15ml": "T070", "30ml": "370", "70ml": "070"} },
+            { id: "71", brand: "CHANEL", name: "Allure", codes: {"15ml": "T071", "30ml": "371", "70ml": "071"} },
+            { id: "72", brand: "REMINISCENCE", name: "Patchouli", codes: {"15ml": "T072", "30ml": "372", "70ml": "072"} },
+            { id: "73", brand: "CREED", name: "Himalaya", codes: {"15ml": "T073", "30ml": "373", "70ml": "073"} },
+            { id: "74", brand: "NASOMATTO", name: "Black Afgano", codes: {"15ml": "T074", "50ml": "074"} },
+            { id: "75", brand: "CLIVE CHRISTIAN", name: "X for Men", codes: {"15ml": "T075", "50ml": "075"} },
+            { id: "76", brand: "G. ARMANI", name: "Acqua di Gioia", codes: {"15ml": "T076", "30ml": "376", "70ml": "076"} },
+            { id: "158W", brand: "GUCCI", name: "Flora Wild Bloom", codes: {"15ml": "T158W", "30ml": "3158W", "70ml": "158W"} },
+            { id: "79", brand: "Y. SAINT LAURENT", name: "Myslf", codes: {"15ml": "T079", "30ml": "379", "70ml": "079"} },
+            { id: "80", brand: "G. ARMANI", name: "Si", codes: {"15ml": "T080", "30ml": "380", "70ml": "080"} },
+            { id: "81", brand: "J.P GAULTIER", name: "Classique Essence", codes: {"15ml": "T081", "30ml": "381", "70ml": "081"} },
+            { id: "82", brand: "FERRAGAMO", name: "Signorina S.", codes: {"15ml": "T082", "30ml": "382", "70ml": "082"} },
+            { id: "83", brand: "R. CAVALLI", name: "Uomo", codes: {"15ml": "T083", "30ml": "383", "70ml": "083"} },
+            { id: "84", brand: "VERSACE", name: "Dylan Blue", codes: {"15ml": "T084", "30ml": "384", "70ml": "084"} },
+
+            // PAGE 4
+            { id: "85", brand: "CHANEL", name: "Chance", codes: {"15ml": "T85", "30ml": "385", "70ml": "085"} },
+            { id: "86", brand: "MONT BLANC", name: "Legend", codes: {"15ml": "T86", "30ml": "386", "70ml": "086"} },
+            { id: "87", brand: "AZZARO", name: "Wanted", codes: {"15ml": "T87", "30ml": "387", "70ml": "087"} },
+            { id: "88", brand: "BULGARI", name: "Man in Black", codes: {"15ml": "T88", "30ml": "388", "70ml": "088"} },
+            { id: "89", brand: "Y. SAINT LAURENT", name: "Mon Paris", codes: {"15ml": "T089", "30ml": "389", "70ml": "089"} },
+            { id: "90", brand: "C. DIOR", name: "Poison Girl", codes: {"15ml": "T090", "30ml": "390", "70ml": "090"} },
+            { id: "91", brand: "AZZARO", name: "Chrome", codes: {"15ml": "T091", "30ml": "391", "70ml": "091"} },
+            { id: "78", brand: "P. RABANNE", name: "Ultraviolet", codes: {"15ml": "T078", "30ml": "378", "70ml": "078"} },
+            { id: "93", brand: "CREED", name: "Aventus for Her", codes: {"15ml": "T093", "30ml": "393", "70ml": "093"} },
+            { id: "94", brand: "C. DIOR", name: "Sauvage", codes: {"15ml": "T094", "30ml": "394", "70ml": "094"} },
+            { id: "159W", brand: "BURBERRY", name: "British Charm For Her", codes: {"15ml": "T159W", "30ml": "3159W", "70ml": "159W"} },
+            { id: "96", brand: "CHANEL", name: "Gabrielle", codes: {"15ml": "T096", "30ml": "396", "70ml": "096"} },
+            { id: "97", brand: "FERRAGAMO", name: "Amo Ferragamo", codes: {"15ml": "T097", "30ml": "397", "70ml": "097"} },
+            { id: "98", brand: "C. DIOR", name: "Joy", codes: {"15ml": "T098", "30ml": "398", "70ml": "098"} },
+            { id: "99", brand: "T. FORD", name: "MandarinodiAmalfi", codes: {"15ml": "T099", "30ml": "399", "70ml": "099"} },
+            { id: "100", brand: "MONTALE", name: "White Aoud", codes: {"15ml": "T100", "30ml": "3100", "70ml": "100"} },
+            { id: "101", brand: "D&G", name: "Velvet Amber Skin", codes: {"15ml": "T101", "50ml": "101"} },
+            { id: "102", brand: "D&G", name: "Velvet Amber Sun", codes: {"15ml": "T102", "50ml": "102"} },
+            { id: "105", brand: "MONTALE", name: "Intense Café", codes: {"15ml": "T105", "30ml": "3105", "70ml": "105"} },
+            { id: "106", brand: "T. FORD", name: "Fucking Fabulous", codes: {"15ml": "T106", "50ml": "106"} },
+            { id: "109", brand: "C. DIOR", name: "J'Adore l'Or", codes: {"15ml": "T109", "50ml": "109"} },
+            { id: "110", brand: "T. TERENZI", name: "Kirké", codes: {"15ml": "T110", "30ml": "3110", "70ml": "110"} },
+            { id: "111", brand: "T. FORD", name: "Lost Cherry", codes: {"15ml": "T111", "50ml": "111"} },
+            { id: "112", brand: "T. FORD", name: "Neroli Portofino", codes: {"15ml": "T112", "50ml": "112"} },
+
+            // PAGE 5
+            { id: "113", brand: "L. VUITTON", name: "Sur la Route", codes: {"15ml": "T113", "30ml": "3113", "70ml": "113"} },
+            { id: "114", brand: "L. VUITTON", name: "Ombre Nomade", codes: {"15ml": "T114", "30ml": "3114", "70ml": "114"} },
+            { id: "115", brand: "LANCOME", name: "Idôle", codes: {"15ml": "T115", "30ml": "3115", "70ml": "115"} },
+            { id: "116", brand: "CACHAREL", name: "Yes I Am", codes: {"15ml": "T116", "30ml": "3116", "70ml": "116"} },
+            { id: "117", brand: "T. FORD", name: "Tobacco Vanille", codes: {"15ml": "T117", "50ml": "117"} },
+            { id: "118", brand: "MAISON FRANCIS K.", name: "Baccarat Rouge 540", codes: {"15ml": "T118", "50ml": "118"} },
+            { id: "119", brand: "JP. GAULTIER", name: "Scandal", codes: {"15ml": "T119", "30ml": "3119", "70ml": "119"} },
+            { id: "120", brand: "GUERLAIN", name: "La Petite Robe Noire", codes: {"15ml": "T120", "30ml": "3120", "70ml": "120"} },
+            { id: "121", brand: "GIVENCHY", name: "L'Interdit", codes: {"15ml": "T121", "30ml": "3121", "70ml": "121"} },
+            { id: "122", brand: "Y. SAINT LAURENT", name: "Libre", codes: {"15ml": "T114", "30ml": "3114", "70ml": "114"} },
+            { id: "123", brand: "KILIAN", name: "Good Girl Gone Bad", codes: {"15ml": "T123", "50ml": "123"} },
+            { id: "124", brand: "MORPH", name: "Zeta", codes: {"15ml": "T124", "50ml": "124"} },
+            { id: "125", brand: "TOM FORD", name: "Sole di Positano Aqua", codes: {"15ml": "T125", "50ml": "125"} },
+            { id: "126", brand: "T. FORD", name: "Soleil Blanc", codes: {"15ml": "T126", "50ml": "126"} },
+            { id: "127", brand: "T. FORD", name: "Oud Wood", codes: {"15ml": "T127", "50ml": "127"} },
+            { id: "128", brand: "T. FORD", name: "Vanille Fatale", codes: {"15ml": "T128", "50ml": "128"} },
+            { id: "129", brand: "XERJOFF", name: "Erba Pura", codes: {"15ml": "T129", "50ml": "129"} },
+            { id: "130", brand: "ORTO PARISI", name: "Megamare", codes: {"15ml": "T130", "50ml": "130"} },
+            { id: "131", brand: "C. HERRERA", name: "Good Girl", codes: {"15ml": "T131", "30ml": "3131", "70ml": "131"} },
+            { id: "132", brand: "ARMANI", name: "My Way", codes: {"15ml": "T132", "30ml": "3132", "70ml": "132"} },
+            { id: "133", brand: "PRADA", name: "Prada Paradoxe", codes: {"15ml": "T133", "30ml": "3133", "70ml": "133"} },
+            { id: "134", brand: "T. FORD", name: "Bitter Peach", codes: {"15ml": "T134", "50ml": "134"} },
+            { id: "135", brand: "C. DIOR", name: "Bois d'Argent", codes: {"15ml": "T135", "30ml": "3135", "70ml": "135"} },
+            { id: "136", brand: "C. DIOR", name: "Dior Homme Intense", codes: {"15ml": "T136", "30ml": "3136", "70ml": "136"} },
+
+            // PAGE 6
+            { id: "137", brand: "XERJOFF", name: "XJ 1861 Naxos", codes: {"15ml": "T137", "50ml": "137"} },
+            { id: "138", brand: "OJAR", name: "Whood Whisper", codes: {"15ml": "T138", "50ml": "138"} },
+            { id: "139", brand: "L. VUITTON", name: "Les Sables Roses", codes: {"15ml": "T139", "50ml": "139"} },
+            { id: "140", brand: "VERSACE", name: "Eros", codes: {"15ml": "T140", "30ml": "3140", "70ml": "140"} },
+            { id: "141", brand: "SPIRIT OF DUBAÏ", name: "Turath", codes: {"15ml": "T141", "50ml": "141"} },
+            { id: "142", brand: "TOM FORD", name: "Ombré Leather", codes: {"15ml": "T142", "30ml": "3142", "70ml": "142"} },
+            { id: "143", brand: "MATIÈRE PREMIÈRE", name: "Vanille Powder", codes: {"15ml": "T143", "50ml": "143"} },
+            { id: "144", brand: "GIARDINI DI TOSCANA", name: "Bianco Latte", codes: {"15ml": "T144", "50ml": "144"} },
+            { id: "145", brand: "D&G", name: "Dévotion", codes: {"15ml": "T145", "30ml": "3145", "70ml": "145"} },
+            { id: "146", brand: "BALMAIN", name: "Rouge Pierre", codes: {"15ml": "T146", "50ml": "146"} },
+            { id: "147M", brand: "HUGO BOSS", name: "Bottled Absolu", codes: {"15ml": "T147", "30ml": "3147", "70ml": "147"} },
+            { id: "148", brand: "BURBERRY", name: "Goddess Divine Aura", codes: {"15ml": "T148", "30ml": "3148", "70ml": "148"} },
+            { id: "161w", brand: "VALENTINO", name: "Donna Born in roma intens", codes: {"15ml": "T161W", "30ml": "3161W", "70ml": "161W"} },
+            { id: "162M", brand: "VALENTINO", name: "Uomo Born in roma intens", codes: {"15ml": "T162M", "30ml": "3162M", "70ml": "162M"} },
+            { id: "163W", brand: "MIU MIU", name: "MIUTINE", codes: {"15ml": "T163W", "30ml": "3163W", "70ml": "163W"} },
+            { id: "164M", brand: "PRADA", name: "Prada Paradigme Refillable", codes: {"15ml": "T164W", "30ml": "3164W", "70ml": "164W"} }
+        ];
+
+        const searchInput = document.getElementById('search');
+        const resultsDiv = document.getElementById('results');
+
+        function performSearch() {
+            const query = searchInput.value.toLowerCase().trim();
+            resultsDiv.innerHTML = '';
+
+            if (query === '') {
+                resultsDiv.innerHTML = '<div class="no-results">Enter a search term to find products</div>';
+                return;
+            }
+
+            const filtered = perfumes.filter(p => 
+                p.id.toLowerCase().includes(query) || 
+                p.name.toLowerCase().includes(query) ||
+                p.brand.toLowerCase().includes(query)
+            );
+
+            if (filtered.length === 0) {
+                resultsDiv.innerHTML = '<div class="no-results">No products found</div>';
+                return;
+            }
+
+            filtered.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                
+                let codesHtml = '';
+                for (const [size, code] of Object.entries(p.codes)) {
+                    codesHtml += `
+                        <div class="code-row">
+                            <span class="size">${size}</span>
+                            <span class="code">${code}</span>
+                        </div>`;
+                }
+
+                card.innerHTML = `
+                    <img src="images/${p.id}.jpg" class="card-img" onerror="this.src='https://via.placeholder.com/400x250?text=${p.id}'">
+                    <div class="card-content">
+                        <div class="brand">${p.brand}</div>
+                        <div class="name">#${p.id} ${p.name}</div>
+                        <div class="codes-container">
+                            ${codesHtml}
+                        </div>
+                    </div>
+                `;
+                resultsDiv.appendChild(card);
+            });
+        }
+
+        searchInput.addEventListener('input', performSearch);
+    </script>
+</body>
+</html>
